@@ -80,7 +80,7 @@ def run_with_threads(fn, data_list):
             
 
 if __name__ == "__main__":
-    chapter_list = [i for i in range(0,100)] # chapter range here
+    chapter_list = [i for i in range(0,101)] # chapter range here
     run_with_threads(get_chapter, chapter_list)
     
     for c in chapter_list:
