@@ -1,6 +1,6 @@
 import requests
 import shutil
-import os, csv
+import os, csv, sys
 import concurrent.futures
 from bs4 import BeautifulSoup
 
@@ -30,26 +30,33 @@ def get_chapter(chap_n):
     if os.path.exists(img_list_file):
         return read_img_list_file(img_list_file)
     
-    # BW URL: http://kissmanga.xyz/one-piece/chapter-1/0
-    # Color URL: https://holymanga.page/one-piece-digital-colored-comics-chap-1/ 
+    list_bw = get_bw_images(chap_n)
+    list_color = get_color_images(chap_n)
     
-    r_bw = requests.get('http://kissmanga.xyz/one-piece/chapter-{0}/0'.format(chap_n), timeout=60)
+    out_list = list_bw + list_color
+    write_img_list_file(img_list_file, out_list)
+
+def get_bw_images(chap_n):
+    # BW URL: https://manganelo.com/chapter/read_one_piece_manga_online_free4/chapter_1
+    r_bw = requests.get('https://manganelo.com/chapter/read_one_piece_manga_online_free4/chapter_{0}'.format(chap_n), timeout=60)
     if r_bw.status_code == 200:
         soup_bw = BeautifulSoup(r_bw.text, 'html.parser')
-        imgs_bw = map(lambda X : X['src'], soup_bw.find('div', class_='chapter-content-inner text-center').find_all('img'))
+        imgs_bw = map(lambda X : X['src'], soup_bw.find('div', class_='vung-doc', id='vungdoc').find_all('img'))
         list_bw = [(chap_n,idx,'bw',url) for idx,url in enumerate(list(imgs_bw))]
         print('Chapter {0}: {1}'.format(chap_n, 'bw'))
+        return list_bw
+    else: return None
 
+def get_color_images(chap_n):
+    # Color URL: https://holymanga.page/one-piece-digital-colored-comics-chap-1/ 
     r_color = requests.get('https://holymanga.page/one-piece-digital-colored-comics-chap-{0}/'.format(chap_n), timeout=60)
     if r_color.status_code == 200:
         soup_color = BeautifulSoup(r_color.text, 'html.parser')
         imgs_color = map(lambda X : X['src'], soup_color.find('center').find_all('img'))
         list_color = [(chap_n,idx,'color',url) for idx,url in enumerate(list(imgs_color))]
         print('Chapter {0}: {1}'.format(chap_n, 'color'))
-
-    # assert len(list_bw) == len(list_color), 'BW/Color list lengths not equal. BW: {0}, Color: {1}'.format(len(list_bw), len(list_color))
-    out_list = list_bw + list_color
-    write_img_list_file(img_list_file, out_list)
+        return list_color
+    else: return None
 
 def save_imgs(tuple_args):
     (chap_n, image_n, mode, img_url) = tuple_args
@@ -78,9 +85,14 @@ def run_with_threads(fn, data_list):
             except Exception as exc:
                 print('%r generated an exception: %s' % (future_url, exc))
             
-
 if __name__ == "__main__":
-    chapter_list = [i for i in range(0,101)] # chapter range here
+    if len(sys.argv) < 3:
+        print('Usage: python3 {0} [starting chapter] [ending chapter]'.format(sys.argv[0]))
+        sys.exit()
+
+    chap_start = int(sys.argv[1])
+    chap_end = int(sys.argv[2])
+    chapter_list = [i for i in range(chap_start,chap_end+1)] # chapter range here
     run_with_threads(get_chapter, chapter_list)
     
     for c in chapter_list:
