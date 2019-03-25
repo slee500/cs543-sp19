@@ -60,8 +60,7 @@ def get_color_images(chap_n):
 
 def save_imgs(tuple_args):
     (chap_n, image_n, mode, img_url) = tuple_args
-    img_ext = 'jpeg' if mode == 'bw' else 'png'
-    file_path = os.path.join(get_img_save_dir(chap_n), 'chap{0}_{1}_part{2}.{3}'.format(chap_n, mode, image_n, img_ext))
+    file_path = os.path.join(get_img_save_dir(chap_n), 'chap{0}_{1}_part{2}.jpg'.format(chap_n, mode, image_n)
     if os.path.exists(file_path):
         # Image already exists, no need to download
         return None
