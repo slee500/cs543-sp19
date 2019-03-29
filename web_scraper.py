@@ -4,12 +4,6 @@ import os, csv, sys
 import concurrent.futures
 from bs4 import BeautifulSoup
 
-def get_img_save_dir(chap_n):
-    img_save_dir = os.path.join(os.getcwd(), 'images', 'chap{0}'.format(chap_n))
-    if not os.path.exists(img_save_dir):
-        os.makedirs(img_save_dir)
-    return img_save_dir
-
 def read_img_list_file(img_list_file):
     img_list = []
     with open(img_list_file, 'r') as f:
@@ -26,26 +20,12 @@ def write_img_list_file(img_list_file, data):
         writer.writerows(data)
 
 def get_chapter(chap_n):
-    img_list_file = os.path.join(get_img_save_dir(chap_n), 'chap{0}links.csv'.format(chap_n))
+    img_list_file = os.path.join('images', 'csv', 'chap{0}links.csv'.format(chap_n))
     if os.path.exists(img_list_file):
         return read_img_list_file(img_list_file)
     
-    list_bw = get_bw_images(chap_n)
     list_color = get_color_images(chap_n)
-    
-    out_list = list_bw + list_color
-    write_img_list_file(img_list_file, out_list)
-
-def get_bw_images(chap_n):
-    # BW URL: https://manganelo.com/chapter/read_one_piece_manga_online_free4/chapter_1
-    r_bw = requests.get('https://manganelo.com/chapter/read_one_piece_manga_online_free4/chapter_{0}'.format(chap_n), timeout=60)
-    if r_bw.status_code == 200:
-        soup_bw = BeautifulSoup(r_bw.text, 'html.parser')
-        imgs_bw = map(lambda X : X['src'], soup_bw.find('div', class_='vung-doc', id='vungdoc').find_all('img'))
-        list_bw = [(chap_n,idx,'bw',url) for idx,url in enumerate(list(imgs_bw))]
-        print('Chapter {0}: {1}'.format(chap_n, 'bw'))
-        return list_bw
-    else: return None
+    write_img_list_file(img_list_file, list_color)
 
 def get_color_images(chap_n):
     # Color URL: https://holymanga.page/one-piece-digital-colored-comics-chap-1/ 
@@ -60,7 +40,7 @@ def get_color_images(chap_n):
 
 def save_imgs(tuple_args):
     (chap_n, image_n, mode, img_url) = tuple_args
-    file_path = os.path.join(get_img_save_dir(chap_n), 'chap{0}_{1}_part{2}.jpeg'.format(chap_n, mode, image_n))
+    file_path = os.path.join('images', 'chap{0}_{1}_part{2}.jpeg'.format(chap_n, mode, image_n))
     if os.path.exists(file_path):
         # Image already exists, no need to download
         return None
