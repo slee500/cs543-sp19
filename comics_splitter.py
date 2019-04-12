@@ -5,8 +5,9 @@ import re
 from math import ceil
 from PIL import Image, ImageDraw
 import time
+import numpy as np
 
-DEBUG = True
+DEBUG = False
 STEP = 5
 
 def print_help():
@@ -283,7 +284,7 @@ def horizontal_cut(imageGrey, tolerance, diago, angle=200):
                     square = [(0, lastY), (sizeX, lastY)]
                     startSquare = True
                     if DEBUG:
-                        print("Découpage horizontal débute à y={}".format(lastY))
+                        print("Horizontal cutting begins at y={}".format(lastY))
 
         else: #search for end of a panel
             if y > lastY and search_horizontal(imageGrey, tolerance, y)[0] == sizeX: #find blanck line
@@ -294,7 +295,7 @@ def horizontal_cut(imageGrey, tolerance, diago, angle=200):
                 inclinaison = 0
                 lastY = y
                 if DEBUG:
-                    print("Découpage horizontal finit à y={}".format(y))
+                    print("Horizontal cutting finish at y={}".format(y))
             elif diago:
                 yUp = max(y - angle, lastY)
                 yDown = min(y + angle, sizeY - 1)
@@ -311,15 +312,82 @@ def horizontal_cut(imageGrey, tolerance, diago, angle=200):
 
     if startSquare: #fin de page
         if DEBUG:
-            print("Découpage horizontal finit à y={}".format(sizeY))
+            print("Horizontal cutting finish at y={}".format(sizeY))
         square.append((sizeX, sizeY))
         square.append((0, sizeY))
         panels.append(square)
 
     if DEBUG and len(panels) == 0:
-        print("Découpage horizontal impossible")
+        print("Horizontal cutting impossible!")
 
     return panels
+
+def vertical_split(imGrey, sq):
+    x_min = sq[0][0]
+    y_min = sq[0][1]
+    x_max = sq[2][0]
+    y_max = sq[2][1]
+
+    if y_max - y_min < 10:
+        return None
+
+    imGrey_np = np.asarray(imGrey, dtype=np.int)
+    im_crop = imGrey_np[y_min:y_max, x_min:x_max]
+
+    stat_median = np.median(im_crop, axis=0)
+    stat_stddev = np.std(im_crop, axis=0)
+    bounds = []
+
+    startSquare = False
+    foundColorStrip = False
+    for x in range(0, im_crop.shape[1], 2):
+        if not startSquare:
+            # Finding start of panel split
+            if stat_median[x] > 250:
+                # We have found a starting point
+                leftX = x
+                startSquare = True
+                foundColorStrip = False
+                if leftX > 50 and len(bounds) == 0:
+                    # We missed a strip? 
+                    bounds.append([x_min, leftX])
+        else:
+            if not foundColorStrip:
+                if stat_median[x] < 250:
+                    foundColorStrip = True
+            else: # Find end of panel
+                if stat_median[x] > 250:
+                    startSquare = False
+                    if x - leftX < 50 or stat_stddev[x] > 25:
+                        startSquare = True
+                        foundColorStrip = False
+                    else:
+                        bounds.append([leftX, x])
+
+    if startSquare: # End of page
+        if x - leftX < 50:
+            lastBound = bounds[-1]
+            leftX = lastBound[0]
+            bounds[-1] = [leftX, x]
+        else:
+            bounds.append([leftX, x])
+
+    # Return list of coordinates in the format that the main code uses
+    # [(top left x,y), (bottom left x,y), (bottom right x,y), (top right x,y)]
+    ret_bounds = []
+    for b in bounds:
+        ret_bounds.append([(b[0], y_min), (b[0], y_max), (b[1], y_max), (b[1], y_min)])
+
+    # Save images (temp step -- will be removed when integrating code)
+    # for idx,b in enumerate(bounds):
+    #     print(b, stat_stddev[b[0]], stat_stddev[b[1]])
+    #     im_to_save = im_crop[:, b[0]:b[1]]
+    #     plt.imsave('test_splitter_out/{0}_row{1}_im{2}.jpg'.format(fname, n_row, idx), im_to_save, cmap='gray')
+    if len(ret_bounds) == 0:
+        ret_bounds = [sq]
+
+    return ret_bounds
+
 
 def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
     case2split = []
@@ -358,9 +426,17 @@ def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
             x3, y3 = square[3]
 
             if verticalSplit:
-                print("#TODO")
+                more_panels = vertical_split(imageGrey, square)
 
-            case2split.append([(x_left, y0), (x_right, y1), (x_right, y2), (x_left, y3)])
+                if more_panels != None and len(more_panels) > 1:
+                    for mp in more_panels:
+                        _, mp_y0 = mp[0]
+                        _, mp_y1 = mp[1]
+                        _, mp_y2 = mp[2]
+                        _, mp_y3 = mp[3]
+                        case2split.append([(x_left, mp_y0), (x_right, mp_y1), (x_right, mp_y2), (x_left, mp_y3)])
+            else:
+                case2split.append([(x_left, y0), (x_right, y1), (x_right, y2), (x_left, y3)])
 
         #tmps444 = time.clock()
         #print("after tot %f" % (tmps444 - tmps1))
@@ -413,10 +489,10 @@ def main(argv):
         exit()
 
     if not os.path.isdir(inputDir):
-        print("{} n'est pas un dossier".format(inputDir))
+        print("{} not found".format(inputDir))
         exit()
     if not os.path.isdir(outputDir):
-        print("{} n'est pas un dossier".format(outputDir))
+        print("{} not found".format(outputDir))
         exit()
 
     page = 0
@@ -429,6 +505,7 @@ def main(argv):
 
     for file in files:
         print(os.path.splitext(file))
+        fname = os.path.splitext(file)[0].lower()
         ext = os.path.splitext(file)[1].lower()
         if ext in [".jpg", ".png", ".jpeg"]:
             page += 1
@@ -440,7 +517,8 @@ def main(argv):
             #tmps3 = time.clock()
             #print("after convert %f" % (tmps3 - tmps2))
 
-            case2split = search_split(imGrey, diago=diago)
+            case2split = search_split(imGrey, diago=diago, tolerance=20, verticalSplit=False)
+            print('Final splits: {0}'.format(case2split))
             #tmps4 = time.clock()
             #print("after split %f" % (tmps4 - tmps3))
             #imDraw = draw_case(case2split, im)
@@ -451,13 +529,12 @@ def main(argv):
             #tmps5 = time.clock()
             #print("after cut %f" % (tmps5 - tmps4))
 
-            num = 0
-            for i2s in im2sav:
-                i2s.save("{}/{}_{:02}{}".format(outputDir, page, num, ext))
-                num += 1
+            for num, i2s in enumerate(im2sav):
+                i2s.save("{}/{}_slice{:02}{}".format(outputDir, fname, num, ext))
             #tmps6 = time.clock()
             #print("after save %f" % (tmps6 - tmps5))
-            print("totale = %f" % (time.clock() - tmps1))
+            print("Total time = %f" % (time.clock() - tmps1))
+            break
 
 if __name__ == "__main__":
    main(sys.argv[1:])
