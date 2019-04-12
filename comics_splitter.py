@@ -10,11 +10,12 @@ DEBUG = False
 STEP = 5
 
 def print_help():
-    print('Usage : comics_splitter.py -i <inputDir> -o <outputDir>')
+    print('Usage : comics_splitter.py -i <inputDir> -o <outputDir> <Options>')
     print("""Options:
     -r, --rotate : enable rotation to always have a portrait page (very usefull on E-reader)
     -d, --diago : enable diagonal split (longer processing)
     -s, --sort : smart sort on files name (Windows sort)
+    -v, --vert : vertical split
     -h, --help : print help
     --draw : only draw cut area
     """)
@@ -392,8 +393,9 @@ def main(argv):
     diago = False
     rotate = False
     draw = False
+    vert = False
     try:
-        opts, args = getopt.getopt(argv,"hi:o:sdrw",["help", "idir=", "odir=", "sort", "diago", "rotate", "draw"])
+        opts, args = getopt.getopt(argv,"hi:o:sdrwv",["help", "idir=", "odir=", "sort", "diago", "rotate", "draw", "vert"])
         print(opts)
     except getopt.GetoptError:
         print_help()
@@ -411,6 +413,9 @@ def main(argv):
             rotate = True
         elif opt == "--draw":
             draw = True
+        elif opt in ("-v", "--vertical"):
+            vert = True
+            print("Vertical")
         else:
             print_help()
 
@@ -447,7 +452,7 @@ def main(argv):
             #tmps3 = time.clock()
             #print("after convert %f" % (tmps3 - tmps2))
 
-            case2split = search_split(imGrey, diago=diago, tolerance=20, verticalSplit=True)
+            case2split = search_split(imGrey, diago=diago, tolerance=20, verticalSplit=vert)
             #tmps4 = time.clock()
             #print("after split %f" % (tmps4 - tmps3))
             #imDraw = draw_case(case2split, im)

@@ -23,7 +23,7 @@ def vertical_split(imGrey, sq, stepsize=2):
 
     stat_median = np.median(im_crop, axis=0)
     stat_stddev = np.std(im_crop, axis=0)
-    bounds = []
+    bounds = [] 
 
     startSquare = False
     foundColorStrip = False
@@ -96,8 +96,10 @@ def clip_x(sq_in, x_left, x_right):
         curr_x, curr_y = coord
         if i == 0 or i == 3:
             new_x = curr_x if curr_x > x_left else x_left
-        else:
+            new_x = x_left if np.abs(new_x - x_left) < 50 else new_x
+        elif i == 1 or i == 2:
             new_x = curr_x if curr_x < x_right else x_right
+            new_x = x_right if np.abs(new_x - x_right) < 50 else new_x
 
         sq_out.append((new_x, curr_y))
 
