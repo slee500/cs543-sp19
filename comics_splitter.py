@@ -1,11 +1,10 @@
 # coding: utf-8
 import sys, getopt
-import os
-import re
+import os, re
 from math import ceil
 from PIL import Image, ImageDraw
 import time
-import numpy as np
+import my_fn
 
 DEBUG = False
 STEP = 5
@@ -88,6 +87,8 @@ def cut_panels(imageColor, polygons, rotate=False):
                 diago = True
 
             box = (x0, yUp, x1, yDown)
+            # print("Polygon: {0}".format(polygon))
+            # print("Box: {0}, diago: {1}".format(box, diago))
 
             if diago:
                 copy = imageColor.copy()
@@ -322,73 +323,6 @@ def horizontal_cut(imageGrey, tolerance, diago, angle=200):
 
     return panels
 
-def vertical_split(imGrey, sq):
-    x_min = sq[0][0]
-    y_min = sq[0][1]
-    x_max = sq[2][0]
-    y_max = sq[2][1]
-
-    if y_max - y_min < 10:
-        return None
-
-    imGrey_np = np.asarray(imGrey, dtype=np.int)
-    im_crop = imGrey_np[y_min:y_max, x_min:x_max]
-
-    stat_median = np.median(im_crop, axis=0)
-    stat_stddev = np.std(im_crop, axis=0)
-    bounds = []
-
-    startSquare = False
-    foundColorStrip = False
-    for x in range(0, im_crop.shape[1], 2):
-        if not startSquare:
-            # Finding start of panel split
-            if stat_median[x] > 250:
-                # We have found a starting point
-                leftX = x
-                startSquare = True
-                foundColorStrip = False
-                if leftX > 50 and len(bounds) == 0:
-                    # We missed a strip? 
-                    bounds.append([x_min, leftX])
-        else:
-            if not foundColorStrip:
-                if stat_median[x] < 250:
-                    foundColorStrip = True
-            else: # Find end of panel
-                if stat_median[x] > 250:
-                    startSquare = False
-                    if x - leftX < 50 or stat_stddev[x] > 25:
-                        startSquare = True
-                        foundColorStrip = False
-                    else:
-                        bounds.append([leftX, x])
-
-    if startSquare: # End of page
-        if x - leftX < 50:
-            lastBound = bounds[-1]
-            leftX = lastBound[0]
-            bounds[-1] = [leftX, x]
-        else:
-            bounds.append([leftX, x])
-
-    # Return list of coordinates in the format that the main code uses
-    # [(top left x,y), (bottom left x,y), (bottom right x,y), (top right x,y)]
-    ret_bounds = []
-    for b in bounds:
-        ret_bounds.append([(b[0], y_min), (b[0], y_max), (b[1], y_max), (b[1], y_min)])
-
-    # Save images (temp step -- will be removed when integrating code)
-    # for idx,b in enumerate(bounds):
-    #     print(b, stat_stddev[b[0]], stat_stddev[b[1]])
-    #     im_to_save = im_crop[:, b[0]:b[1]]
-    #     plt.imsave('test_splitter_out/{0}_row{1}_im{2}.jpg'.format(fname, n_row, idx), im_to_save, cmap='gray')
-    if len(ret_bounds) == 0:
-        ret_bounds = [sq]
-
-    return ret_bounds
-
-
 def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
     case2split = []
     sizeX, sizeY = imageGrey.size
@@ -426,15 +360,11 @@ def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
             x3, y3 = square[3]
 
             if verticalSplit:
-                more_panels = vertical_split(imageGrey, square)
-
-                if more_panels != None and len(more_panels) > 1:
+                more_panels = my_fn.vertical_split(imageGrey, square)
+                if len(more_panels) > 0:
                     for mp in more_panels:
-                        _, mp_y0 = mp[0]
-                        _, mp_y1 = mp[1]
-                        _, mp_y2 = mp[2]
-                        _, mp_y3 = mp[3]
-                        case2split.append([(x_left, mp_y0), (x_right, mp_y1), (x_right, mp_y2), (x_left, mp_y3)])
+                        to_append = my_fn.clip_x(mp, x_left, x_right)
+                        case2split.append(to_append)
             else:
                 case2split.append([(x_left, y0), (x_right, y1), (x_right, y2), (x_left, y3)])
 
@@ -517,8 +447,7 @@ def main(argv):
             #tmps3 = time.clock()
             #print("after convert %f" % (tmps3 - tmps2))
 
-            case2split = search_split(imGrey, diago=diago, tolerance=20, verticalSplit=False)
-            print('Final splits: {0}'.format(case2split))
+            case2split = search_split(imGrey, diago=diago, tolerance=20, verticalSplit=True)
             #tmps4 = time.clock()
             #print("after split %f" % (tmps4 - tmps3))
             #imDraw = draw_case(case2split, im)
@@ -534,7 +463,6 @@ def main(argv):
             #tmps6 = time.clock()
             #print("after save %f" % (tmps6 - tmps5))
             print("Total time = %f" % (time.clock() - tmps1))
-            break
 
 if __name__ == "__main__":
    main(sys.argv[1:])
