@@ -1,4 +1,5 @@
 # coding: utf-8
+import pdb
 import sys, getopt
 import os, re
 from math import ceil
@@ -110,42 +111,6 @@ def cut_panels(imageColor, polygons, rotate=False):
             imagesOut.append(temp)
 
     return imagesOut
-
-def regroup(squareY, miniCaseHeight):
-    i = 0
-    while i < len(squareY):
-        y0, y1 = squareY[i]
-        if y1-y0 < miniCaseHeight:
-            if i == 0 and i+1 < len(squareY):
-                squareY[i][1] = squareY[i+1][1]
-                squareY.pop(i+1)
-                i = 0
-                if DEBUG:
-                    print("Regroupage !!")
-            elif i > 0 and i+1 == len(squareY):
-                squareY[i-1][1] = squareY[i][1]
-                squareY.pop(i)
-                i=0
-                if DEBUG:
-                    print("Regroupage !!")
-            elif i > 0 and i+1 < len(squareY):
-                y00, y01 = squareY[i - 1]
-                y10, y11 = squareY[i + 1]
-                if (y01 - y00) > (y11 - y10):
-                    squareY[i][1] = squareY[i + 1][1]
-                    squareY.pop(i + 1)
-                else:
-                    squareY[i - 1][1] = squareY[i][1]
-                    squareY.pop(i)
-                i = 0
-                if DEBUG:
-                    print("Regroupage !!")
-            else:
-                i += 1
-        else:
-            i += 1
-
-    return squareY
 
 def search_left_right_borders(imageGrey, tolerance):
     sizeX, sizeY = imageGrey.size
