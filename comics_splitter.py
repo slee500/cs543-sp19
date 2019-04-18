@@ -293,14 +293,9 @@ def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
     case2split = []
     sizeX, sizeY = imageGrey.size
 
-    #tmps1 = time.clock()
     x_left, x_right = search_left_right_borders(imageGrey, tolerance)
-    #tmps2 = time.clock()
-    #print("after search_left_border %f" % (tmps2 - tmps1))
 
     #x_right = search_right_border(imageGrey, tolerance)
-    #tmps3 = time.clock()
-    #print("after search_right_border %f" % (tmps3 - tmps2))
 
     if DEBUG:
         print("x_left = {}, x_right = {}".format(x_left, x_right))
@@ -309,9 +304,6 @@ def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
     imageGrey = imageGrey.crop(box)
 
     horiSplit = horizontal_cut(imageGrey, tolerance, diago)
-
-    #tmps4 = time.clock()
-    #print("after search_horizontal %f" % (tmps4 - tmps3))
 
     if DEBUG:
         print(horiSplit)
@@ -334,8 +326,6 @@ def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
             else:
                 case2split.append([(x_left, y0), (x_right, y1), (x_right, y2), (x_left, y3)])
 
-        #tmps444 = time.clock()
-        #print("after tot %f" % (tmps444 - tmps1))
     return case2split
 
 def draw_case(boxList, imageColor, borderWidth=3):
@@ -380,7 +370,6 @@ def main(argv):
             draw = True
         elif opt in ("-v", "--vertical"):
             vert = True
-            print("Vertical")
         else:
             print_help()
 
@@ -404,39 +393,32 @@ def main(argv):
         files = sorted(files, key=lambda x: alphanum_key(x))
 
     for file in files:
-        print(os.path.splitext(file))
+        print("--------------------------")
+        print("Processing {}".format(file))
         fname = os.path.splitext(file)[0].lower()
         ext = os.path.splitext(file)[1].lower()
         if ext in [".jpg", ".png", ".jpeg"]:
             page += 1
-            tmps1 = time.clock()
             im = Image.open("{}/{}".format(inputDir, file))
-            #tmps2 = time.clock()
-            #print("after open %f"  % (tmps2 - tmps1))
             imGrey = im.convert("L")
-            #tmps3 = time.clock()
-            #print("after convert %f" % (tmps3 - tmps2))
 
             case2split = search_split(imGrey, diago=diago, tolerance=20, verticalSplit=vert)
 
-            """ Filter our panels with a threshold for aspect ratio """
+            # If we did not have any splits (there is only one panel), skip
+            # this file.
+            if len(case2split) == 1:
+                print("Skipped file due to lack of any splits")
+                continue
+            # Filter our panels with a threshold for aspect ratio
             case2split = my_fn.filter_panels(case2split)
 
-            #tmps4 = time.clock()
-            #print("after split %f" % (tmps4 - tmps3))
-            #imDraw = draw_case(case2split, im)
             if draw:
                 im2sav = [draw_case(case2split, im)]
             else:
                 im2sav = cut_panels(im, case2split, rotate)
-            #tmps5 = time.clock()
-            #print("after cut %f" % (tmps5 - tmps4))
 
             for num, i2s in enumerate(im2sav):
                 i2s.save("{}/{}_slice{:02}{}".format(outputDir, fname, num, ext))
-            #tmps6 = time.clock()
-            #print("after save %f" % (tmps6 - tmps5))
-            print("Total time = %f" % (time.clock() - tmps1))
 
 if __name__ == "__main__":
    main(sys.argv[1:])
