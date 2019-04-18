@@ -309,6 +309,7 @@ def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
     imageGrey = imageGrey.crop(box)
 
     horiSplit = horizontal_cut(imageGrey, tolerance, diago)
+    pdb.set_trace()
 
     #tmps4 = time.clock()
     #print("after search_horizontal %f" % (tmps4 - tmps3))
