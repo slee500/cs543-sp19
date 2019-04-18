@@ -309,7 +309,6 @@ def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
     imageGrey = imageGrey.crop(box)
 
     horiSplit = horizontal_cut(imageGrey, tolerance, diago)
-    pdb.set_trace()
 
     #tmps4 = time.clock()
     #print("after search_horizontal %f" % (tmps4 - tmps3))
@@ -419,6 +418,10 @@ def main(argv):
             #print("after convert %f" % (tmps3 - tmps2))
 
             case2split = search_split(imGrey, diago=diago, tolerance=20, verticalSplit=vert)
+
+            """ Filter our panels with a threshold for aspect ratio """
+            case2split = my_fn.filter_panels(case2split)
+
             #tmps4 = time.clock()
             #print("after split %f" % (tmps4 - tmps3))
             #imDraw = draw_case(case2split, im)

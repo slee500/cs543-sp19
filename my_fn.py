@@ -1,4 +1,32 @@
+import pdb
 import numpy as np
+
+def filter_panels(panels, threshold=0.4):
+    '''
+    iterate through our panels and remove all of our panels that do not fall
+    within our threshold of a 1:1 aspect ratio.
+    '''
+    # in the case that there were no splits, don't change anything
+    if len(panels) == 1:
+        return panels
+
+    filtered_panels = []
+    for panel in panels:
+        x_min = panel[0][0]
+        y_min = panel[0][1]
+        x_max = panel[2][0]
+        y_max = panel[2][1]
+
+        w = x_max - x_min
+        h = y_max - y_min
+
+        # this gives us the ratio as a fraction <= 1
+        ratio = float(min(w, h)) / max(w, h)
+
+        if ratio >= threshold:
+            filtered_panels.append(panel)
+    return filtered_panels
+
 
 def vertical_split(imGrey, sq, stepsize=2):
     '''
