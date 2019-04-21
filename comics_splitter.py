@@ -6,6 +6,7 @@ from math import ceil
 from PIL import Image, ImageDraw
 import time
 import my_fn
+import concurrent.futures
 
 DEBUG = False
 STEP = 5
@@ -293,16 +294,14 @@ def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
     case2split = []
     sizeX, sizeY = imageGrey.size
 
-    x_left, x_right = search_left_right_borders(imageGrey, tolerance)
-
-    #x_right = search_right_border(imageGrey, tolerance)
-
+    # x_left, x_right = search_left_right_borders(imageGrey, tolerance)
     if DEBUG:
         print("x_left = {}, x_right = {}".format(x_left, x_right))
 
-    box = (x_left, 0, x_right, sizeY)
-    imageGrey = imageGrey.crop(box)
-
+    # box = (x_left, 0, x_right, sizeY)
+    # imageGrey = imageGrey.crop(box)
+    x_left = 0
+    x_right = sizeX
     horiSplit = horizontal_cut(imageGrey, tolerance, diago)
 
     if DEBUG:
@@ -311,7 +310,7 @@ def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
     if len(horiSplit) == 0:
         case2split.append([(x_left, 0), (x_right, 0), (x_right, sizeY), (x_left, sizeY)])
     else:
-        for square in horiSplit:
+        for square in my_fn.keep_white_space(horiSplit):
             x0, y0 = square[0]
             x1, y1 = square[1]
             x2, y2 = square[2]
@@ -320,9 +319,7 @@ def search_split(imageGrey, diago=False, verticalSplit=False, tolerance=10):
             if verticalSplit:
                 more_panels = my_fn.vertical_split(imageGrey, square)
                 if len(more_panels) > 0:
-                    for mp in more_panels:
-                        to_append = my_fn.clip_x(mp, x_left, x_right)
-                        case2split.append(to_append)
+                    case2split += more_panels
             else:
                 case2split.append([(x_left, y0), (x_right, y1), (x_right, y2), (x_left, y3)])
 
@@ -340,6 +337,46 @@ def draw_case(boxList, imageColor, borderWidth=3):
             #imageDraw.rectangle([(x0 - i, y0 - i), (x1 + i, y1 + i)], outline="red")
     del imageDraw
     return imageColor
+
+def process_image(file, tuple_args):
+    inputDir, outputDir, vert, diago, rotate, draw = tuple_args
+    print("Processing {}".format(file))
+    fname = os.path.splitext(file)[0].lower()
+    ext = os.path.splitext(file)[1].lower()
+    if ext in [".jpg", ".png", ".jpeg"]:
+        im = Image.open("{}/{}".format(inputDir, file))
+        imGrey = im.convert("L")
+
+        case2split = search_split(imGrey, diago=diago, tolerance=20, verticalSplit=vert)
+
+        # If we did not have any splits (there is only one panel), skip
+        # this file.
+        if len(case2split) == 1:
+            print("Skipped file due to lack of any splits")
+            return
+        
+        # Filter our panels with a threshold for aspect ratio
+        case2split = my_fn.filter_panels(case2split)
+
+        if draw:
+            im2sav = [draw_case(case2split, im)]
+        else:
+            im2sav = cut_panels(im, case2split, rotate)
+
+        for num, i2s in enumerate(im2sav):
+            i2s.save("{}/{}_slice{:02}{}".format(outputDir, fname, num, ext))
+
+def process_image_w_threads(fn, data_list, tuple_args):
+    # Source: https://docs.python.org/3/library/concurrent.futures.html#threadpoolexecutor-example
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        # Start the load operations and mark each future with its URL
+        future_to_url = {executor.submit(fn, d, tuple_args): d for d in data_list}
+        for future in concurrent.futures.as_completed(future_to_url):
+            future_url = future_to_url[future]
+            try:
+                data = future.result()
+            except Exception as exc:
+                print('%r generated an exception: %s' % (future_url, exc))
 
 def main(argv):
     inputDir = ''
@@ -384,41 +421,14 @@ def main(argv):
         print("{} not found".format(outputDir))
         exit()
 
-    page = 0
-
     files = os.listdir(inputDir)
     if sort:
         convert = lambda text: int(text) if text.isdigit() else text
         alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
         files = sorted(files, key=lambda x: alphanum_key(x))
-
-    for file in files:
-        print("--------------------------")
-        print("Processing {}".format(file))
-        fname = os.path.splitext(file)[0].lower()
-        ext = os.path.splitext(file)[1].lower()
-        if ext in [".jpg", ".png", ".jpeg"]:
-            page += 1
-            im = Image.open("{}/{}".format(inputDir, file))
-            imGrey = im.convert("L")
-
-            case2split = search_split(imGrey, diago=diago, tolerance=20, verticalSplit=vert)
-
-            # If we did not have any splits (there is only one panel), skip
-            # this file.
-            if len(case2split) == 1:
-                print("Skipped file due to lack of any splits")
-                continue
-            # Filter our panels with a threshold for aspect ratio
-            case2split = my_fn.filter_panels(case2split)
-
-            if draw:
-                im2sav = [draw_case(case2split, im)]
-            else:
-                im2sav = cut_panels(im, case2split, rotate)
-
-            for num, i2s in enumerate(im2sav):
-                i2s.save("{}/{}_slice{:02}{}".format(outputDir, fname, num, ext))
+ 
+    tuple_args = (inputDir, outputDir, vert, diago, rotate, draw)
+    process_image_w_threads(process_image, files, tuple_args)
 
 if __name__ == "__main__":
    main(sys.argv[1:])
