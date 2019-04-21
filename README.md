@@ -2,6 +2,7 @@
 ### comics_splitter.py
 1. Syntax: `python3 comics_splitter.py -i <input_dir> -o <output_dir>`.
 2. Can try adding `-d` for diagonal split, `-v` for vertical split and `--draw` to draw cut area. 
+3. Output files have been uploaded to https://uofi.app.box.com/folder/71469618739
 
 ### TODO List
 - [ ] Use an even more robust algorithm for vertical splitting
