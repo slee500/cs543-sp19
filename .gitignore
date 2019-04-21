@@ -1,3 +1,11 @@
+# Folders that hold images 
+images_raw/
+images_panels/
+samples_in/
+samples_out
+
+
+
 # Created by https://www.gitignore.io/api/vim,macos,python,windows,virtualenv
 # Edit at https://www.gitignore.io/?templates=vim,macos,python,windows,virtualenv
 
@@ -211,5 +219,3 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.gitignore.io/api/vim,macos,python,windows,virtualenv
-#
-images/

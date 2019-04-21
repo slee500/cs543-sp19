@@ -340,7 +340,6 @@ def draw_case(boxList, imageColor, borderWidth=3):
 
 def process_image(file, tuple_args):
     inputDir, outputDir, vert, diago, rotate, draw = tuple_args
-    print("Processing {}".format(file))
     fname = os.path.splitext(file)[0].lower()
     ext = os.path.splitext(file)[1].lower()
     if ext in [".jpg", ".png", ".jpeg"]:
@@ -352,9 +351,10 @@ def process_image(file, tuple_args):
         # If we did not have any splits (there is only one panel), skip
         # this file.
         if len(case2split) == 1:
-            print("Skipped file due to lack of any splits")
+            print("Skipped {0} due to lack of splits".format(file))
             return
         
+        print("Processed {0}".format(file))
         # Filter our panels with a threshold for aspect ratio
         case2split = my_fn.filter_panels(case2split)
 
