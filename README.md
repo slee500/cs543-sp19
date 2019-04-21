@@ -5,6 +5,6 @@
 
 ### TODO List
 - [ ] Use an even more robust algorithm for vertical splitting
-- [-] See what happens when we combine vertical, horizontal and diagonal splitting
-- [-] Fix red boxes to include all pixels (no clipping - easier for reconstruction) 
-- [-] Add code to check for aspect ratios and drop badly-sized panels
+- [x] See what happens when we combine vertical, horizontal and diagonal splitting
+- [x] Fix red boxes to include all pixels (no clipping - easier for reconstruction) 
+- [x] Add code to check for aspect ratios and drop badly-sized panels
