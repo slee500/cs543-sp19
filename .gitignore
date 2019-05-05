@@ -2,8 +2,9 @@
 images_raw/
 images_panels/
 samples_in/
-samples_out
-
+samples_out/
+chap827*
+final_imgs/
 
 
 # Created by https://www.gitignore.io/api/vim,macos,python,windows,virtualenv
