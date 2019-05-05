@@ -6,6 +6,10 @@ import argparse
 from collections import defaultdict
 import os
 
+'''
+Usage: python3 restitch.py <ground_truth_dir> <fake_colorized_dir>
+'''
+
 FAKE_REG_FILTER = "fake_reg.png"
 FINAL_IMG_FOLDER = "final_imgs"
 FINAL_IMG_PARTS = os.path.join(FINAL_IMG_FOLDER, "parts") # the different panels that make up a page
